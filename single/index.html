@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Chat Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            line-height: 1.5;
+        }
+
+        .card {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-title {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.5rem;
+        }
+
+        .card-content {
+            padding: 20px;
+        }
+
+        .file-upload {
+            margin-bottom: 24px;
+        }
+
+        .file-upload label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .file-upload input {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .messages {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            padding: 20px;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+        }
+
+        .message.user {
+            align-self: flex-end;
+        }
+
+        .message.system {
+            align-self: flex-start;
+        }
+
+        .message-role {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            width: fit-content;
+        }
+
+        .message-content {
+            padding: 16px 20px;          /* 여백 살짝 늘림 */
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            word-break: break-word;
+            font-size: 15px;             /* 기본 글자 크기 */
+            letter-spacing: 0.01em;      /* 자간 살짝 늘림 */
+            line-height: 1.6;            /* 줄간격 늘림 */
+        }
+
+        /* Markdown header sizes */
+        .message-content h1 { font-size: 20px; margin: 0.5em 0; }
+        .message-content h2 { font-size: 18px; margin: 0.5em 0; }
+        .message-content h3 { font-size: 16px; margin: 0.5em 0; }
+        .message-content h4 { font-size: 16px; margin: 0.5em 0; }
+        .message-content h5 { font-size: 16px; margin: 0.5em 0; }
+        .message-content h6 { font-size: 16px; margin: 0.5em 0; }
+
+        /* Role specific styles */
+        .message.user .message-content {
+            background-color: #007AFF;
+            color: white;
+            border-top-right-radius: 4px;
+        }
+
+        .message.planner .message-content {
+            background-color: #F2F2F7;
+            border-top-left-radius: 4px;
+        }
+
+        .message.researcher .message-content {
+            background-color: #F2F7F2;
+            border-top-left-radius: 4px;
+        }
+
+        .message.reviewer .message-content {
+            background-color: #F7F2F2;
+            border-top-left-radius: 4px;
+        }
+
+        .user .message-role {
+            align-self: flex-end;
+            background-color: #E1F0FF;
+            color: #007AFF;
+        }
+
+        .planner .message-role {
+            background-color: #F2F2F7;
+            color: #1C1C1E;
+        }
+
+        .researcher .message-role {
+            background-color: #E8F5E9;
+            color: #1B5E20;
+        }
+
+        .reviewer .message-role {
+            background-color: #FFEBEE;
+            color: #B71C1C;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .session-select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            background-color: white;
+            cursor: pointer;
+            min-width: 150px;
+        }
+
+        /* Markdown styles */
+        .message-content pre {
+            background: rgba(0,0,0,0.05);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+
+        .message-content code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.9em;
+        }
+
+        .message-content p {
+            margin: 0 0 1.5em 0;         /* 문단 간격 늘림 */
+        }
+
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .user .message-content pre,
+        .user .message-content code {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .user .message-content {
+            color: white;
+        }
+
+        .user .message-content a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        .current-file {
+            margin: 12px 20px;
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .current-file.active {
+            background-color: #e3f2fd;
+            color: #1a73e8;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="card-header">
+            <h1 class="card-title">
+                📁 Markdown Chat Viewer
+            </h1>
+        </div>
+        <div class="card-content">
+            <div class="file-upload">
+                <label>Upload your markdown file:</label>
+                <input type="file" accept=".md,.txt,.csv" id="fileInput">
+            </div>
+            <div id="currentFileName" class="current-file"></div>
+            <div class="controls">
+                <select id="sessionSelect" class="session-select">
+                    <option value="all">All Sessions</option>
+                </select>
+            </div>
+            <div class="messages" id="messagesContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let allMessages = [];
+        let currentSession = 'all';
+
+        const roleIcons = {
+            'User': '👤',
+            'Planner': '📋',
+            'Researcher': '🔍',
+            'Reviewer': '✅',
+            'Assistant': '🤖',
+        };
+
+        function saveToLocalStorage(file, fileContent, selectedSession) {
+            localStorage.setItem('savedFileName', file.name);
+            localStorage.setItem('savedContent', fileContent);
+            localStorage.setItem('selectedSession', selectedSession || 'all');
+            
+            updateFileNameDisplay(file.name);
+        }
+        
+        function loadFromLocalStorage() {
+            const savedContent = localStorage.getItem('savedContent');
+            const savedSession = localStorage.getItem('selectedSession') || 'all';
+            const savedFileName = localStorage.getItem('savedFileName');
+            
+            if (savedContent && savedFileName) {
+                allMessages = formatMarkdown(savedContent);
+                updateSessionList();
+                currentSession = savedSession;
+                document.getElementById('sessionSelect').value = savedSession;
+                displayMessages(filterMessagesBySession(allMessages, currentSession));
+                updateFileNameDisplay(savedFileName);
+            }
+        }
+        
+        function updateFileNameDisplay(fileName) {
+            const fileLabel = document.getElementById('currentFileName');
+            if (fileName) {
+                fileLabel.textContent = `Current file: ${fileName}`;
+                fileLabel.classList.add('active');
+            } else {
+                fileLabel.textContent = 'No file loaded';
+                fileLabel.classList.remove('active');
+            }
+        }
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        // JSON 문자열 처리 함수
+        function tryParseJSON(text) {
+            try {
+                const parsed = JSON.parse(`{${text}}`);
+                return Object.values(parsed)[0];
+            } catch {
+                return text;
+            }
+        }
+
+        // CSV 파싱 헬퍼 함수
+        function parseCSVLine(line) {
+            let fields = [];
+            let currentField = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                if (line[i] === '"') {
+                    if (inQuotes && line[i + 1] === '"') {
+                        currentField += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (line[i] === ',' && !inQuotes) {
+                    fields.push(currentField.trim());
+                    currentField = '';
+                } else {
+                    currentField += line[i];
+                }
+            }
+            fields.push(currentField.trim());
+            return fields.map(field => {
+                // Remove surrounding quotes and try to parse JSON if needed
+                field = field.replace(/^"|"$/g, '');
+                if (field.includes('"query": "')) {
+                    return tryParseJSON(field);
+                }
+                return field;
+            });
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    saveToLocalStorage(file, content, 'all');
+                    allMessages = formatMarkdown(content);
+                    updateSessionList();
+                    displayMessages(allMessages);
+                };
+                reader.readAsText(file);
+            }
+        });    
+
+        document.getElementById('sessionSelect').addEventListener('change', function(event) {
+            currentSession = event.target.value;
+            const savedContent = localStorage.getItem('savedContent');
+            const savedFileName = localStorage.getItem('savedFileName');
+            if (savedContent && savedFileName) {
+                saveToLocalStorage({name: savedFileName}, savedContent, currentSession);
+            }
+            displayMessages(filterMessagesBySession(allMessages, currentSession));
+        });
+        function formatMarkdown(text) {
+            if (!text) return [];
+            
+            const lines = text.split('\n');
+            const messages = [];
+            let currentMessage = null;
+
+            for (const line of lines) {
+                if (line.match(/^\d+,/)) {
+                    if (currentMessage) {
+                        messages.push(currentMessage);
+                    }
+                    const fields = parseCSVLine(line);
+                    const [sessionId, messageId, role, ...contentParts] = fields;
+                    currentMessage = {
+                        sessionId,
+                        messageId,
+                        role: role,
+                        content: [contentParts.join(',')]
+                    };
+                } else if (currentMessage) {
+                    currentMessage.content.push(line);
+                }
+            }
+
+            if (currentMessage) {
+                messages.push(currentMessage);
+            }
+
+            return messages.map(msg => ({
+                sessionId: msg.sessionId,
+                messageId: msg.messageId,
+                role: msg.role,
+                content: msg.content.join('\n').trim()
+            }));
+        }
+
+        function updateSessionList() {
+            const sessions = [...new Set(allMessages.map(m => m.sessionId))];
+            const select = document.getElementById('sessionSelect');
+            const currentValue = select.value;
+            
+            select.innerHTML = '<option value="all">All Sessions</option>';
+            sessions.forEach(session => {
+                const option = document.createElement('option');
+                option.value = session;
+                option.textContent = session;
+                select.appendChild(option);
+            });
+
+            if (sessions.includes(currentValue)) {
+                select.value = currentValue;
+            }
+        }
+
+        function filterMessagesBySession(messages, sessionId) {
+            if (sessionId === 'all') return messages;
+            return messages.filter(m => m.sessionId === sessionId);
+        }
+
+        function getRoleClass(role) {
+            return role?.toLowerCase() || 'system';
+        }
+
+        function displayMessages(messages) {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '';
+
+            messages.forEach(message => {
+                const messageDiv = document.createElement('div');
+                const roleClass = getRoleClass(message.role);
+                messageDiv.className = `message ${roleClass}`;
+
+                const roleDiv = document.createElement('div');
+                roleDiv.className = 'message-role';
+                const roleIcon = roleIcons[message.role] || '💬';
+                roleDiv.textContent = `${roleIcon} ${message.role || 'Unknown'}`;
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.innerHTML = marked.parse(message.content);
+
+                messageDiv.appendChild(roleDiv);
+                messageDiv.appendChild(contentDiv);
+                container.appendChild(messageDiv);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!localStorage.getItem('savedContent')) {
+                fetch('../default-chat.csv')
+                    .then(response => response.text())
+                    .then(content => {
+                        saveToLocalStorage({name: 'default-chat.csv'}, content);
+                        allMessages = formatMarkdown(content);
+                        updateSessionList();
+                        displayMessages();
+                    });
+            } else {
+                loadFromLocalStorage();
+            }
+        });
+    </script>
+</body>
+</html>
