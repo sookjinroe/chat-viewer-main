@@ -4,6 +4,8 @@ const roleIcons = {
     'Researcher': '🔍',
     'Reviewer': '✅',
     'Assistant': '🤖',
+    'Agent': '👔',
+    'System': '🧠',
 };
 
 let allMessages = [];

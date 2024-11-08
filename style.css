@@ -123,6 +123,16 @@ body {
     border-top-left-radius: 4px;
 }
 
+.message.agent .message-content {
+    background-color: #E3F2FD; /* 배경색 */
+    border-top-left-radius: 4px;
+}
+
+.message.system .message-content {
+    background-color: #E0F7FA; /* 배경색 */
+    border-top-left-radius: 4px;
+}
+
 .user .message-role {
     align-self: flex-end;
     background-color: #E1F0FF;
@@ -142,6 +152,16 @@ body {
 .reviewer .message-role {
     background-color: #FFEBEE;
     color: #B71C1C;
+}
+
+.agent .message-role {
+    background-color: #BBDEFB; /* 역할 배경색 */
+    color: #0D47A1; /* 텍스트 색상 */
+}
+
+.system .message-role {
+    background-color: #B2EBF2; /* 역할 배경색 */
+    color: #006064; /* 텍스트 색상 */
 }
 
 .controls {
